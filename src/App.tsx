@@ -2,9 +2,14 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import YamlEditor from './components/diagram/YamlEditor';
 import DiagramCanvas from './components/diagram/DiagramCanvas';
 import Toolbar from './components/diagram/Toolbar';
+import InterviewSetup from './components/interview/InterviewSetup';
+import InterviewerModal from './components/interview/InterviewerModal';
+import SettingsPage from './components/settings/SettingsPage';
 import { parseYaml } from './utils/yamlParser';
 import { gridLayout, tieredLayout } from './utils/layoutEngine';
 import { exportSvgToFile, copyYamlToClipboard } from './utils/exportSvg';
+import { useSettings } from './hooks/useSettings';
+import { useInterview } from './hooks/useInterview';
 import type { DiagramData, Theme, NodeType, ConnectionType } from './types/diagram';
 import { DEFAULT_YAML } from './types/diagram';
 import './App.css';
@@ -45,6 +50,11 @@ function newId(): string {
 }
 
 function App() {
+  // Settings & Interview hooks
+  const { settings, updateSettings } = useSettings();
+  const [interview, interviewActions] = useInterview(settings);
+  const [showSettings, setShowSettings] = useState(false);
+  const [modalExpanded, setModalExpanded] = useState(false);
   const [diagrams, setDiagrams] = useState<SavedDiagram[]>(() => {
     const saved = loadDiagrams();
     if (saved.length > 0) return saved;
@@ -454,13 +464,31 @@ function App() {
     <div className={`app-container theme-${theme}`}>
       <header className="app-header">
         <h1>System Design Interviewer 🎤</h1>
-        <Toolbar
-          theme={theme}
-          onThemeChange={setTheme}
-          onAutoLayout={handleAutoLayout}
-          onExportSvg={handleExportSvg}
-          onCopyYaml={handleCopyYaml}
-        />
+        <div className="header-actions">
+          <Toolbar
+            theme={theme}
+            onThemeChange={setTheme}
+            onAutoLayout={handleAutoLayout}
+            onExportSvg={handleExportSvg}
+            onCopyYaml={handleCopyYaml}
+          />
+          <div className="header-separator" />
+          <button
+            className="toolbar-btn toolbar-btn-interview"
+            onClick={interviewActions.startSetup}
+            disabled={interview.state !== 'idle'}
+            title={!settings.geminiApiKey ? 'Set up API key in Settings first' : 'Start a mock interview'}
+          >
+            🎤 Interview
+          </button>
+          <button
+            className="toolbar-btn"
+            onClick={() => setShowSettings(true)}
+            title="Settings"
+          >
+            ⚙️
+          </button>
+        </div>
       </header>
       <div className="tab-bar">
         {diagrams.map((d) => (
@@ -610,6 +638,47 @@ function App() {
         />
       </main>
       {copyFeedback && <div className="copy-toast">📋 YAML copied to clipboard!</div>}
+
+      {/* Interview Setup Dialog */}
+      {interview.state === 'setup' && (
+        <InterviewSetup
+          settings={settings}
+          onStart={interviewActions.beginInterview}
+          onCancel={interviewActions.cancelSetup}
+        />
+      )}
+
+      {/* Interviewer Modal (visible during active interview) */}
+      {(interview.state === 'connecting' || interview.state === 'active' || interview.state === 'paused' || interview.state === 'reconnecting') && (
+        <InterviewerModal
+          status={interview.status}
+          subtitle={interview.subtitle}
+          elapsedSeconds={interview.elapsedSeconds}
+          durationMinutes={interview.config?.duration || 50}
+          tokenUsage={interview.tokenUsage}
+          isRecording={interview.isRecording}
+          isMuted={interview.isMuted}
+          monologueSeconds={interview.monologueSeconds}
+          canvasSyncAgo={interview.canvasSyncAgo}
+          sessionResumeCount={interview.sessionResumeCount}
+          expanded={modalExpanded}
+          onToggleExpanded={() => setModalExpanded(!modalExpanded)}
+          onPause={interviewActions.pause}
+          onResume={interviewActions.resume}
+          onMuteToggle={interviewActions.toggleMute}
+          onEnd={interviewActions.endInterview}
+          isPaused={interview.state === 'paused'}
+        />
+      )}
+
+      {/* Settings Page */}
+      {showSettings && (
+        <SettingsPage
+          settings={settings}
+          onUpdate={updateSettings}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
   );
 }
