@@ -42,7 +42,13 @@ interface InterviewActions {
 const RECONNECT_DELAYS = [1000, 3000, 5000];
 
 export function useInterview(settings: AppSettings): [InterviewHookState, InterviewActions] {
-  const [state, setState] = useState<InterviewState>('idle');
+  const [state, setStateRaw] = useState<InterviewState>('idle');
+  const stateRef = useRef<InterviewState>('idle');
+  const setState = useCallback((s: InterviewState) => {
+    console.log('[Interview] State:', stateRef.current, '→', s);
+    stateRef.current = s;
+    setStateRaw(s);
+  }, []);
   const [status, setStatus] = useState<AIStatus>('disconnected');
   const [subtitle, setSubtitle] = useState('');
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
@@ -123,21 +129,21 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
         setSubtitle(text);
       },
       onStatus: (newStatus) => {
-        console.log('[Interview] Status changed:', newStatus, '(state:', state, ')');
+        console.log('[Interview] Status changed:', newStatus, '(state:', stateRef.current, ')');
         setStatus(newStatus);
-        if (newStatus === 'listening' && state === 'connecting') {
+        if (newStatus === 'listening' && stateRef.current === 'connecting') {
           console.log('[Interview] ✅ Interview is ACTIVE');
           setState('active');
           reconnectAttempt.current = 0;
         }
-        if (newStatus === 'disconnected' && state === 'active') {
+        if (newStatus === 'disconnected' && stateRef.current === 'active') {
           console.warn('[Interview] Disconnected during active interview — attempting reconnect');
           handleDisconnect();
         }
       },
       onError: (error) => {
         console.error('[Interview] Gemini error:', error);
-        if (state === 'active' || state === 'reconnecting') {
+        if (stateRef.current === 'active' || stateRef.current === 'reconnecting') {
           handleDisconnect();
         }
       },
@@ -163,8 +169,8 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
   }, [settings, addTranscriptEntry]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDisconnect = useCallback(() => {
-    console.warn('[Interview] handleDisconnect called, state:', state, 'isPaused:', isPausedRef.current);
-    if (isPausedRef.current || state === 'ending' || state === 'report' || state === 'idle') return;
+    console.warn('[Interview] handleDisconnect called, state:', stateRef.current, 'isPaused:', isPausedRef.current);
+    if (isPausedRef.current || stateRef.current === 'ending' || stateRef.current === 'report' || stateRef.current === 'idle') return;
 
     const handle = provider.current?.getLastResumeHandle();
     if (handle && reconnectAttempt.current < RECONNECT_DELAYS.length) {
@@ -184,7 +190,7 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
       setStatus('disconnected');
       addTranscriptEntry('system', 'Connection lost. Interview can be continued in text mode or ended.');
     }
-  }, [config, connectToGemini, addTranscriptEntry, state]);
+  }, [config, connectToGemini, addTranscriptEntry]);
 
   const startSetup = useCallback(() => {
     setState('setup');

@@ -134,12 +134,12 @@ export class GeminiLiveProvider {
       ? { handle: resumeHandle }
       : {};
 
+    // The first message must be a BidiGenerateContentSetup with key "config"
+    // Model name must include "models/" prefix
     const setupMessage: Record<string, unknown> = {
-      setup: {
-        model: config.model,
-        generationConfig: {
-          responseModalities: config.responseModalities,
-        },
+      config: {
+        model: `models/${config.model}`,
+        responseModalities: config.responseModalities,
         systemInstruction: {
           parts: [{ text: config.systemInstruction }],
         },
@@ -152,7 +152,7 @@ export class GeminiLiveProvider {
       },
     };
 
-    console.log('[Gemini] Setup message:', JSON.stringify(setupMessage).slice(0, 300) + '...');
+    console.log('[Gemini] Setup message:', JSON.stringify(setupMessage).slice(0, 500) + '...');
     this.ws!.send(JSON.stringify(setupMessage));
   }
 
