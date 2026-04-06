@@ -92,7 +92,7 @@ export default function InterviewerModal({
   const monoLevel = monologueLevel(monologueSeconds);
 
   const truncatedSubtitle = useCallback(
-    (text: string) => (text.length > 60 ? text.slice(0, 57) + '…' : text),
+    (text: string) => (text.length > 200 ? text.slice(0, 197) + '…' : text),
     [],
   );
 

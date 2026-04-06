@@ -1054,7 +1054,7 @@
 /* ---- Interviewer Modal ---- */
 .interviewer-modal {
   position: fixed;
-  top: 16px;
+  bottom: 16px;
   right: 16px;
   z-index: 1500;
   background: rgba(20, 20, 28, 0.88);
@@ -1152,10 +1152,13 @@
   color: #8888aa;
   font-style: italic;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
   margin-bottom: 6px;
   min-height: 16px;
+  line-height: 1.4;
 }
 
 .modal-controls {
