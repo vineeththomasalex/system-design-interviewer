@@ -20,15 +20,24 @@ export class GeminiLiveProvider {
     this.ws.onopen = () => {
       console.log('[Gemini] WebSocket OPEN — sending setup message');
       this.sendSetupMessage(config, resumeHandle);
-      this.events.onStatus('listening');
+      // Don't set 'listening' yet — wait for setupComplete from server
     };
 
-    this.ws.onmessage = (event: MessageEvent) => {
+    this.ws.onmessage = async (event: MessageEvent) => {
       try {
-        const msg = JSON.parse(event.data as string);
+        // Server may send data as Blob, ArrayBuffer, or string
+        let jsonStr: string;
+        if (event.data instanceof Blob) {
+          jsonStr = await event.data.text();
+        } else if (event.data instanceof ArrayBuffer) {
+          jsonStr = new TextDecoder().decode(event.data);
+        } else {
+          jsonStr = event.data as string;
+        }
+        const msg = JSON.parse(jsonStr);
         this.handleMessage(msg);
       } catch (err) {
-        console.error('[Gemini] Failed to parse message:', err, event.data);
+        console.error('[Gemini] Failed to parse message:', err, typeof event.data);
         this.events.onError(new Error(`Failed to parse message: ${err}`));
       }
     };
@@ -165,6 +174,14 @@ export class GeminiLiveProvider {
     if (!msg.serverContent || !(msg.serverContent as Record<string, unknown>).modelTurn) {
       console.log('[Gemini] Received:', keys.join(', '), JSON.stringify(msg).slice(0, 200));
     }
+
+    // Setup complete — server accepted our config, now safe to send audio
+    if (msg.setupComplete !== undefined) {
+      console.log('[Gemini] ✅ Setup complete — session ready');
+      this.events.onStatus('listening');
+      return;
+    }
+
     // Server content (audio, transcripts, interruption)
     if (msg.serverContent) {
       this.handleServerContent(msg.serverContent as Record<string, unknown>);
