@@ -7,6 +7,7 @@ import { AudioCapture } from '../services/audio/AudioCapture';
 import { AudioPlayback } from '../services/audio/AudioPlayback';
 import { SessionRecorder } from '../services/audio/SessionRecorder';
 import { buildSystemPrompt, detectQuestionTemplate } from '../utils/promptBuilder';
+import { saveInterview } from '../store/interviewHistory';
 import type { AppSettings } from '../types/interview';
 
 interface InterviewHookState {
@@ -279,10 +280,21 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
     provider.current?.disconnect();
     provider.current = null;
 
+    // Save to interview history
+    if (config) {
+      saveInterview({
+        config,
+        transcript,
+        tokenUsage,
+        elapsedSeconds,
+        summary: '', // Summary will be set by App.tsx
+      });
+    }
+
     // Transition to report
     setState('report');
     setStatus('disconnected');
-  }, []);
+  }, [config, transcript, tokenUsage, elapsedSeconds]);
 
   const dismissReport = useCallback(() => {
     setState('idle');

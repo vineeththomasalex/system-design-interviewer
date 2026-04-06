@@ -231,5 +231,60 @@ test.describe('System Design Interviewer', () => {
     const vbAfter = await svg.getAttribute('viewBox');
     expect(vbAfter).not.toEqual(vbBefore);
   });
+
+  // ---- Settings Persistence ----
+  test('settings persist across page reloads', async ({ page }) => {
+    // Set up settings
+    await page.getByRole('button', { name: '⚙️' }).click();
+    await page.locator('.settings-dialog input[type="password"]').fill('my-test-key');
+    await page.locator('.settings-dialog input[placeholder="Your name"]').fill('Bob');
+    await page.getByRole('button', { name: 'Save & Close' }).click();
+
+    // Reload
+    await page.reload();
+    await page.waitForSelector('.diagram-svg .diagram-node');
+
+    // Verify persistence
+    await page.getByRole('button', { name: '⚙️' }).click();
+    expect(await page.locator('.settings-dialog input[type="password"]').inputValue()).toBe('my-test-key');
+    expect(await page.locator('.settings-dialog input[placeholder="Your name"]').inputValue()).toBe('Bob');
+  });
+
+  test('settings has API key generation link', async ({ page }) => {
+    await page.getByRole('button', { name: '⚙️' }).click();
+    const link = page.locator('.settings-link');
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute('href', 'https://aistudio.google.com/app/api-keys');
+    await expect(link).toContainText('Get a key');
+  });
+
+  // ---- Interview Setup — Mode Selection ----
+  test('interview setup has voice and text mode options', async ({ page }) => {
+    await page.locator('.toolbar-btn-interview').click();
+    const modeSelect = page.locator('.setup-select').last();
+    await expect(modeSelect).toBeVisible();
+  });
+
+  // ---- Interview Setup — All 10 Templates ----
+  test('all 10 question templates have difficulty badges', async ({ page }) => {
+    await page.locator('.toolbar-btn-interview').click();
+    await page.locator('.setup-btn-toggle').click();
+    
+    const cards = page.locator('.setup-template-card');
+    expect(await cards.count()).toBe(10);
+    
+    // Verify badges exist
+    const badges = page.locator('.setup-badge');
+    expect(await badges.count()).toBe(10);
+  });
+
+  // ---- Interview Setup — Personality Presets ----
+  test('interview setup has personality selector with presets', async ({ page }) => {
+    await page.locator('.toolbar-btn-interview').click();
+    const personalitySelect = page.locator('.setup-select').first();
+    const options = personalitySelect.locator('option');
+    // Should have 5 presets + custom
+    expect(await options.count()).toBeGreaterThanOrEqual(5);
+  });
 });
 

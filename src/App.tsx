@@ -61,6 +61,45 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [modalExpanded, setModalExpanded] = useState(false);
   const [lastSummary, setLastSummary] = useState('');
+
+  // Global keyboard shortcuts for interview controls
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Don't intercept when typing in inputs
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' ||
+        (e.target as HTMLElement)?.isContentEditable ||
+        (e.target as HTMLElement)?.closest('.cm-editor');
+      if (isEditable) return;
+
+      const isActive = interview.state === 'active' || interview.state === 'paused';
+      if (!isActive) return;
+
+      switch (e.key.toLowerCase()) {
+        case ' ': // Space = pause/resume
+          e.preventDefault();
+          if (interview.state === 'paused') interviewActions.resume();
+          else interviewActions.pause();
+          break;
+        case 'm': // M = mute/unmute
+          e.preventDefault();
+          interviewActions.toggleMute();
+          break;
+        case 'i': // I = toggle modal expanded
+          e.preventDefault();
+          setModalExpanded(prev => !prev);
+          break;
+        case 'escape': // Esc = compact modal
+          if (modalExpanded) {
+            e.preventDefault();
+            setModalExpanded(false);
+          }
+          break;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [interview.state, interviewActions, modalExpanded]);
   const [diagrams, setDiagrams] = useState<SavedDiagram[]>(() => {
     const saved = loadDiagrams();
     if (saved.length > 0) return saved;
