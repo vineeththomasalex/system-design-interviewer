@@ -134,12 +134,15 @@ export class GeminiLiveProvider {
       ? { handle: resumeHandle }
       : {};
 
-    // The first message must be a BidiGenerateContentSetup with key "config"
-    // Model name must include "models/" prefix
+    // First message must be BidiGenerateContentSetup with key "setup"
+    // Model needs "models/" prefix
+    // responseModalities goes inside generationConfig
     const setupMessage: Record<string, unknown> = {
-      config: {
+      setup: {
         model: `models/${config.model}`,
-        responseModalities: config.responseModalities,
+        generationConfig: {
+          responseModalities: config.responseModalities,
+        },
         systemInstruction: {
           parts: [{ text: config.systemInstruction }],
         },
