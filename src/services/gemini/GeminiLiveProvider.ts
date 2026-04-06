@@ -11,12 +11,14 @@ export class GeminiLiveProvider {
   }
 
   connect(config: GeminiConfig, resumeHandle?: string): void {
+    console.log('[Gemini] Connecting...', { model: config.model, hasResume: !!resumeHandle });
     this.events.onStatus('connecting');
 
     const url = `${GEMINI_WS_URL}?key=${config.apiKey}`;
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {
+      console.log('[Gemini] WebSocket OPEN — sending setup message');
       this.sendSetupMessage(config, resumeHandle);
       this.events.onStatus('listening');
     };
@@ -26,15 +28,18 @@ export class GeminiLiveProvider {
         const msg = JSON.parse(event.data as string);
         this.handleMessage(msg);
       } catch (err) {
+        console.error('[Gemini] Failed to parse message:', err, event.data);
         this.events.onError(new Error(`Failed to parse message: ${err}`));
       }
     };
 
-    this.ws.onerror = () => {
+    this.ws.onerror = (ev) => {
+      console.error('[Gemini] WebSocket ERROR:', ev);
       this.events.onError(new Error('WebSocket error'));
     };
 
-    this.ws.onclose = () => {
+    this.ws.onclose = (ev) => {
+      console.warn('[Gemini] WebSocket CLOSED:', { code: ev.code, reason: ev.reason, wasClean: ev.wasClean });
       this.events.onStatus('disconnected');
       this.ws = null;
     };
@@ -61,6 +66,7 @@ export class GeminiLiveProvider {
 
   sendText(text: string): void {
     if (!this.isConnected()) return;
+    console.log('[Gemini] Sending text:', text.slice(0, 80) + (text.length > 80 ? '...' : ''));
 
     this.ws!.send(JSON.stringify({
       realtimeInput: {
@@ -71,6 +77,7 @@ export class GeminiLiveProvider {
 
   sendImage(jpegData: ArrayBuffer): void {
     if (!this.isConnected()) return;
+    console.log('[Gemini] Sending canvas JPEG:', (jpegData.byteLength / 1024).toFixed(1) + 'KB');
 
     const base64 = arrayBufferToBase64(jpegData);
     this.ws!.send(JSON.stringify({
@@ -145,10 +152,16 @@ export class GeminiLiveProvider {
       },
     };
 
+    console.log('[Gemini] Setup message:', JSON.stringify(setupMessage).slice(0, 300) + '...');
     this.ws!.send(JSON.stringify(setupMessage));
   }
 
   private handleMessage(msg: Record<string, unknown>): void {
+    const keys = Object.keys(msg);
+    // Log all messages except pure audio chunks (too noisy)
+    if (!msg.serverContent || !(msg.serverContent as Record<string, unknown>).modelTurn) {
+      console.log('[Gemini] Received:', keys.join(', '), JSON.stringify(msg).slice(0, 200));
+    }
     // Server content (audio, transcripts, interruption)
     if (msg.serverContent) {
       this.handleServerContent(msg.serverContent as Record<string, unknown>);
@@ -186,6 +199,7 @@ export class GeminiLiveProvider {
   private handleServerContent(content: Record<string, unknown>): void {
     // Interruption
     if (content.interrupted) {
+      console.log('[Gemini] Model interrupted by user');
       this.events.onInterrupted();
       return;
     }
@@ -198,6 +212,7 @@ export class GeminiLiveProvider {
           if (part.inlineData) {
             const inlineData = part.inlineData as { data: string; mimeType: string };
             const pcmData = base64ToArrayBuffer(inlineData.data);
+            console.log('[Gemini] Audio chunk received:', (pcmData.byteLength / 1024).toFixed(1) + 'KB');
             this.events.onAudio(pcmData);
           }
         }
@@ -208,6 +223,7 @@ export class GeminiLiveProvider {
     if (content.inputTranscription) {
       const transcript = content.inputTranscription as { text?: string };
       if (transcript.text) {
+        console.log('[Gemini] User transcript:', transcript.text);
         this.events.onInputTranscript(transcript.text);
       }
     }
@@ -216,6 +232,7 @@ export class GeminiLiveProvider {
     if (content.outputTranscription) {
       const transcript = content.outputTranscription as { text?: string };
       if (transcript.text) {
+        console.log('[Gemini] Model transcript:', transcript.text);
         this.events.onOutputTranscript(transcript.text);
       }
     }

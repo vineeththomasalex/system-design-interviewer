@@ -15,6 +15,7 @@ export class AudioPlayback {
   private destinationNode: MediaStreamAudioDestinationNode | null = null;
 
   start(): void {
+    console.log('[AudioPlayback] Starting, sampleRate:', PLAYBACK_SAMPLE_RATE);
     this.audioContext = new AudioContext({ sampleRate: PLAYBACK_SAMPLE_RATE });
     this.gainNode = this.audioContext.createGain();
     this.destinationNode = this.audioContext.createMediaStreamDestination();
@@ -27,7 +28,10 @@ export class AudioPlayback {
   }
 
   playChunk(pcmData: ArrayBuffer): void {
-    if (!this.audioContext || !this.gainNode) return;
+    if (!this.audioContext || !this.gainNode) {
+      console.warn('[AudioPlayback] playChunk called but no AudioContext');
+      return;
+    }
 
     const int16 = new Int16Array(pcmData);
     const float32 = new Float32Array(int16.length);

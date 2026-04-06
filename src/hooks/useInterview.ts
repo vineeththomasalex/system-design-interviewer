@@ -108,24 +108,30 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
 
     const liveProvider = new GeminiLiveProvider({
       onAudio: (pcmData) => {
+        console.log('[Interview] AI audio received, playing chunk:', pcmData.byteLength + 'B');
         audioPlayback.current?.playChunk(pcmData);
         lastModelSpokeRef.current = Date.now();
       },
       onInputTranscript: (text) => {
+        console.log('[Interview] User said:', text);
         addTranscriptEntry('user', text);
         setSubtitle(text);
       },
       onOutputTranscript: (text) => {
+        console.log('[Interview] AI said:', text);
         addTranscriptEntry('model', text);
         setSubtitle(text);
       },
       onStatus: (newStatus) => {
+        console.log('[Interview] Status changed:', newStatus, '(state:', state, ')');
         setStatus(newStatus);
         if (newStatus === 'listening' && state === 'connecting') {
+          console.log('[Interview] ✅ Interview is ACTIVE');
           setState('active');
           reconnectAttempt.current = 0;
         }
         if (newStatus === 'disconnected' && state === 'active') {
+          console.warn('[Interview] Disconnected during active interview — attempting reconnect');
           handleDisconnect();
         }
       },
@@ -136,17 +142,19 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
         }
       },
       onTokenUsage: (usage) => {
+        console.log('[Interview] Token usage:', usage);
         setTokenUsage(usage);
       },
       onInterrupted: () => {
+        console.log('[Interview] Model output interrupted by user speech');
         audioPlayback.current?.clearQueue();
       },
-      onGoAway: (_timeLeftMs) => {
-        // Server is about to disconnect — preemptively reconnect
+      onGoAway: (timeLeftMs) => {
+        console.warn('[Interview] GoAway received, time left:', timeLeftMs + 'ms');
         handleDisconnect();
       },
-      onResumeHandle: (_handle) => {
-        // Handle stored internally by provider
+      onResumeHandle: (handle) => {
+        console.log('[Interview] Resume handle received:', handle.slice(0, 20) + '...');
       },
     });
 
@@ -155,6 +163,7 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
   }, [settings, addTranscriptEntry]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDisconnect = useCallback(() => {
+    console.warn('[Interview] handleDisconnect called, state:', state, 'isPaused:', isPausedRef.current);
     if (isPausedRef.current || state === 'ending' || state === 'report' || state === 'idle') return;
 
     const handle = provider.current?.getLastResumeHandle();
@@ -186,6 +195,7 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
   }, []);
 
   const beginInterview = useCallback(async (interviewConfig: InterviewConfig) => {
+    console.log('[Interview] ▶ BEGIN INTERVIEW', { question: interviewConfig.question, mode: interviewConfig.mode, duration: interviewConfig.duration });
     setConfig(interviewConfig);
     setState('connecting');
     setStatus('connecting');
@@ -239,6 +249,7 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
   }, [settings, connectToGemini, addTranscriptEntry]);
 
   const pause = useCallback(() => {
+    console.log('[Interview] ⏸ PAUSE');
     isPausedRef.current = true;
     setState('paused');
     setStatus('paused');
@@ -246,6 +257,7 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
   }, []);
 
   const resume = useCallback(() => {
+    console.log('[Interview] ▶ RESUME');
     isPausedRef.current = false;
     setState('active');
     setStatus('listening');
@@ -255,11 +267,13 @@ export function useInterview(settings: AppSettings): [InterviewHookState, Interv
 
   const toggleMute = useCallback(() => {
     const newMuted = !isMuted;
+    console.log('[Interview] 🔇 Mute toggled:', newMuted);
     setIsMuted(newMuted);
     audioCapture.current?.setMuted(newMuted);
   }, [isMuted]);
 
   const endInterview = useCallback(() => {
+    console.log('[Interview] ⏹ END INTERVIEW');
     setState('ending');
 
     // Stop audio

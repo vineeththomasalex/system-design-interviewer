@@ -42,6 +42,7 @@ export class AudioCapture {
 
   async start(onAudioChunk: (pcmData: ArrayBuffer) => void): Promise<void> {
     this.onAudioChunk = onAudioChunk;
+    console.log('[AudioCapture] Requesting microphone access...');
 
     this.mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -52,9 +53,12 @@ export class AudioCapture {
       },
     });
 
+    console.log('[AudioCapture] Mic access granted, tracks:', this.mediaStream.getAudioTracks().map(t => t.label));
+
     // Chrome typically ignores sampleRate constraints — use default and downsample
     this.audioContext = new AudioContext();
     const nativeSampleRate = this.audioContext.sampleRate;
+    console.log('[AudioCapture] AudioContext sampleRate:', nativeSampleRate, '→ downsampling to', TARGET_SAMPLE_RATE);
 
     this.sourceNode = this.audioContext.createMediaStreamSource(this.mediaStream);
 
@@ -62,6 +66,7 @@ export class AudioCapture {
     // (output channels must be ≥1 in Chrome or the node won't fire)
     this.scriptNode = this.audioContext.createScriptProcessor(4096, 1, 1);
 
+    let chunkCount = 0;
     this.scriptNode.onaudioprocess = (event: AudioProcessingEvent) => {
       if (this.muted || !this.onAudioChunk) return;
 
@@ -69,6 +74,10 @@ export class AudioCapture {
       const downsampled = downsample(inputData, nativeSampleRate, TARGET_SAMPLE_RATE);
       const pcm = float32ToInt16(downsampled);
       this.onAudioChunk(pcm);
+      chunkCount++;
+      if (chunkCount % 50 === 1) {
+        console.log('[AudioCapture] Chunk #' + chunkCount + ', size:', pcm.byteLength + 'B, muted:', this.muted);
+      }
     };
 
     this.sourceNode.connect(this.scriptNode);
