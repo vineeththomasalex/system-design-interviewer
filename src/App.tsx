@@ -10,6 +10,9 @@ import { gridLayout, tieredLayout } from './utils/layoutEngine';
 import { exportSvgToFile, copyYamlToClipboard } from './utils/exportSvg';
 import { useSettings } from './hooks/useSettings';
 import { useInterview } from './hooks/useInterview';
+import { useCanvasMonitor } from './hooks/useCanvasMonitor';
+import { buildSummaryFromState } from './services/interview/SummaryBuilder';
+import { getMonologueLevel, buildNudgeMessage } from './services/interview/MonologueDetector';
 import type { DiagramData, Theme, NodeType, ConnectionType } from './types/diagram';
 import { DEFAULT_YAML } from './types/diagram';
 import './App.css';
@@ -92,6 +95,57 @@ function App() {
   // Undo/redo stacks for drawing strokes
   const undoStack = useRef<StrokeData[][]>([]);
   const redoStack = useRef<StrokeData[][]>([]);
+
+  // Canvas monitor — sends YAML/notes/image to AI during interview
+  const isInterviewActive = interview.state === 'active';
+  useCanvasMonitor({
+    yaml,
+    notes,
+    svgRef,
+    enabled: isInterviewActive && settings.canvasSharing,
+    intervalMs: settings.canvasUpdateInterval,
+    imageEnabled: settings.canvasImageSharing,
+    onYamlUpdate: (yamlText) => interviewActions.sendCanvasUpdate(yamlText, notes),
+    onNotesUpdate: (notesText) => interviewActions.sendCanvasUpdate(yaml, notesText),
+    onImageUpdate: (jpegData) => interviewActions.sendCanvasImage(jpegData),
+  });
+
+  // Summary builder — generates and injects interview summary every 5 min
+  const lastSummaryRef = useRef(0);
+  useEffect(() => {
+    if (!isInterviewActive || !interview.config) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastSummaryRef.current < 5 * 60 * 1000) return; // Only every 5 min
+      lastSummaryRef.current = now;
+
+      const summary = buildSummaryFromState(
+        interview.config!.question,
+        interview.transcript,
+        yaml,
+        now - interview.elapsedSeconds * 1000,
+      );
+      interviewActions.sendSummary(summary);
+    }, 30_000); // Check every 30s
+    return () => clearInterval(interval);
+  }, [isInterviewActive, interview.config, interview.transcript, yaml, interview.elapsedSeconds, interviewActions]);
+
+  // Monologue nudge — inject text when candidate speaks too long
+  const lastNudgeRef = useRef(0);
+  useEffect(() => {
+    if (!isInterviewActive) return;
+    const level = getMonologueLevel(interview.monologueSeconds);
+    if (level === 'warn' || level === 'critical') {
+      const now = Date.now();
+      if (now - lastNudgeRef.current > 120_000) { // Max one nudge every 2 min
+        const nudge = buildNudgeMessage(interview.monologueSeconds);
+        if (nudge) {
+          interviewActions.sendCanvasUpdate(nudge, '');
+          lastNudgeRef.current = now;
+        }
+      }
+    }
+  }, [isInterviewActive, interview.monologueSeconds, interviewActions]);
 
   const updateStrokes = useCallback((newStrokes: StrokeData[]) => {
     undoStack.current.push([...strokes]);
