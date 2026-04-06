@@ -35,7 +35,17 @@ const SettingsPage: React.FC<Props> = ({ settings, onUpdate, onClose }) => {
           <section className="settings-section">
             <h3>🔑 Gemini API</h3>
             <div className="settings-field">
-              <label>API Key</label>
+              <label>
+                API Key
+                <a
+                  href="https://aistudio.google.com/app/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="settings-link"
+                >
+                  Get a key →
+                </a>
+              </label>
               <div className="settings-key-row">
                 <input
                   type={showKey ? 'text' : 'password'}
