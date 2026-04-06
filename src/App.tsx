@@ -4,6 +4,8 @@ import DiagramCanvas from './components/diagram/DiagramCanvas';
 import Toolbar from './components/diagram/Toolbar';
 import InterviewSetup from './components/interview/InterviewSetup';
 import InterviewerModal from './components/interview/InterviewerModal';
+import InterviewReport from './components/interview/InterviewReport';
+import { exportReportAsMarkdown } from './components/interview/InterviewReportExporter';
 import SettingsPage from './components/settings/SettingsPage';
 import { parseYaml } from './utils/yamlParser';
 import { gridLayout, tieredLayout } from './utils/layoutEngine';
@@ -58,6 +60,7 @@ function App() {
   const [interview, interviewActions] = useInterview(settings);
   const [showSettings, setShowSettings] = useState(false);
   const [modalExpanded, setModalExpanded] = useState(false);
+  const [lastSummary, setLastSummary] = useState('');
   const [diagrams, setDiagrams] = useState<SavedDiagram[]>(() => {
     const saved = loadDiagrams();
     if (saved.length > 0) return saved;
@@ -125,6 +128,7 @@ function App() {
         yaml,
         now - interview.elapsedSeconds * 1000,
       );
+      setLastSummary(summary);
       interviewActions.sendSummary(summary);
     }, 30_000); // Check every 30s
     return () => clearInterval(interval);
@@ -731,6 +735,25 @@ function App() {
           settings={settings}
           onUpdate={updateSettings}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* Interview Report (shown after interview ends) */}
+      {interview.state === 'report' && interview.config && (
+        <InterviewReport
+          transcript={interview.transcript}
+          tokenUsage={interview.tokenUsage}
+          elapsedSeconds={interview.elapsedSeconds}
+          summary={lastSummary}
+          config={interview.config}
+          onDismiss={interviewActions.dismissReport}
+          onExport={() => exportReportAsMarkdown(
+            interview.config!,
+            interview.transcript,
+            interview.tokenUsage,
+            interview.elapsedSeconds,
+            lastSummary,
+          )}
         />
       )}
     </div>
