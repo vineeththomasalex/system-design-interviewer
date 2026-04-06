@@ -13,6 +13,7 @@ import { exportSvgToFile, copyYamlToClipboard } from './utils/exportSvg';
 import { useSettings } from './hooks/useSettings';
 import { useInterview } from './hooks/useInterview';
 import { useCanvasMonitor } from './hooks/useCanvasMonitor';
+import { MicIcon, SettingsIcon } from './components/Icons';
 import { buildSummaryFromState } from './services/interview/SummaryBuilder';
 import { getMonologueLevel, buildNudgeMessage } from './services/interview/MonologueDetector';
 import type { DiagramData, Theme, NodeType, ConnectionType } from './types/diagram';
@@ -560,7 +561,7 @@ function App() {
   return (
     <div className={`app-container theme-${theme}`}>
       <header className="app-header">
-        <h1>System Design Interviewer 🎤</h1>
+        <h1>System Design Interviewer</h1>
         <div className="header-actions">
           <Toolbar
             theme={theme}
@@ -576,14 +577,14 @@ function App() {
             disabled={interview.state !== 'idle'}
             title={!settings.geminiApiKey ? 'Set up API key in Settings first' : 'Start a mock interview'}
           >
-            🎤 Interview
+            <MicIcon size={13} /> Interview
           </button>
           <button
             className="toolbar-btn"
             onClick={() => setShowSettings(true)}
             title="Settings"
           >
-            ⚙️
+            <SettingsIcon size={14} />
           </button>
         </div>
       </header>

@@ -3,6 +3,7 @@ import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { yaml } from '@codemirror/lang-yaml';
 import { EditorView } from '@codemirror/view';
 import { type NodeType, type ConnectionType } from '../../types/diagram';
+import { FileCodeIcon, StickyNoteIcon } from '../Icons';
 import ReferencePanel from './ReferencePanel';
 
 interface Props {
@@ -146,13 +147,13 @@ const YamlEditor: React.FC<Props> = ({
           className={`editor-tab ${activeEditorTab === 'yaml' ? 'editor-tab-active' : ''}`}
           onClick={() => onEditorTabChange('yaml')}
         >
-          📝 YAML
+          <FileCodeIcon size={12} /> YAML
         </button>
         <button
           className={`editor-tab ${activeEditorTab === 'notes' ? 'editor-tab-active' : ''}`}
           onClick={() => onEditorTabChange('notes')}
         >
-          📓 Notes
+          <StickyNoteIcon size={12} /> Notes
         </button>
       </div>
       <div className="editor-body" style={{ display: activeEditorTab === 'yaml' ? 'flex' : 'none' }}>

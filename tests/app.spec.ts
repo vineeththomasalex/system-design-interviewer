@@ -45,13 +45,13 @@ test.describe('System Design Interviewer', () => {
   });
 
   test('settings button is visible in header', async ({ page }) => {
-    const btn = page.getByRole('button', { name: '⚙️' });
+    const btn = page.locator('button[title="Settings"]');
     await expect(btn).toBeVisible();
   });
 
   // ---- Settings Page ----
   test('settings dialog opens and closes', async ({ page }) => {
-    await page.getByRole('button', { name: '⚙️' }).click();
+    await page.locator('button[title="Settings"]').click();
     const dialog = page.locator('.settings-dialog');
     await expect(dialog).toBeVisible();
     await expect(page.locator('.settings-dialog h2')).toContainText('Settings');
@@ -62,32 +62,32 @@ test.describe('System Design Interviewer', () => {
   });
 
   test('settings persists API key', async ({ page }) => {
-    await page.getByRole('button', { name: '⚙️' }).click();
+    await page.locator('button[title="Settings"]').click();
     const input = page.locator('.settings-dialog input[type="password"]');
     await input.fill('test-key-12345');
     await page.getByRole('button', { name: 'Save & Close' }).click();
 
     // Reopen and check
-    await page.getByRole('button', { name: '⚙️' }).click();
+    await page.locator('button[title="Settings"]').click();
     const value = await page.locator('.settings-dialog input[type="password"]').inputValue();
     expect(value).toBe('test-key-12345');
   });
 
   test('settings persists candidate name', async ({ page }) => {
-    await page.getByRole('button', { name: '⚙️' }).click();
+    await page.locator('button[title="Settings"]').click();
     await page.locator('.settings-dialog input[placeholder="Your name"]').fill('Alice');
     await page.getByRole('button', { name: 'Save & Close' }).click();
 
     // Reload and check persistence
     await page.reload();
     await page.waitForSelector('.diagram-svg .diagram-node');
-    await page.getByRole('button', { name: '⚙️' }).click();
+    await page.locator('button[title="Settings"]').click();
     const value = await page.locator('.settings-dialog input[placeholder="Your name"]').inputValue();
     expect(value).toBe('Alice');
   });
 
   test('settings shows validate button disabled without key', async ({ page }) => {
-    await page.getByRole('button', { name: '⚙️' }).click();
+    await page.locator('button[title="Settings"]').click();
     // Clear key
     await page.locator('.settings-dialog input[type="password"]').fill('');
     const validateBtn = page.locator('.settings-btn-validate');
@@ -235,7 +235,7 @@ test.describe('System Design Interviewer', () => {
   // ---- Settings Persistence ----
   test('settings persist across page reloads', async ({ page }) => {
     // Set up settings
-    await page.getByRole('button', { name: '⚙️' }).click();
+    await page.locator('button[title="Settings"]').click();
     await page.locator('.settings-dialog input[type="password"]').fill('my-test-key');
     await page.locator('.settings-dialog input[placeholder="Your name"]').fill('Bob');
     await page.getByRole('button', { name: 'Save & Close' }).click();
@@ -245,13 +245,13 @@ test.describe('System Design Interviewer', () => {
     await page.waitForSelector('.diagram-svg .diagram-node');
 
     // Verify persistence
-    await page.getByRole('button', { name: '⚙️' }).click();
+    await page.locator('button[title="Settings"]').click();
     expect(await page.locator('.settings-dialog input[type="password"]').inputValue()).toBe('my-test-key');
     expect(await page.locator('.settings-dialog input[placeholder="Your name"]').inputValue()).toBe('Bob');
   });
 
   test('settings has API key generation link', async ({ page }) => {
-    await page.getByRole('button', { name: '⚙️' }).click();
+    await page.locator('button[title="Settings"]').click();
     const link = page.locator('.settings-link');
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute('href', 'https://aistudio.google.com/app/api-keys');

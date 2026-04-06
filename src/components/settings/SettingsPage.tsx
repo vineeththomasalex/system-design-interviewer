@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { AppSettings, KeyValidationResult, InterviewerPersonality } from '../../types/interview';
 import { PERSONALITY_PRESETS } from '../../types/interview';
 import { validateGeminiKey } from '../../services/gemini/GeminiKeyValidator';
+import { KeyIcon, UserIcon, MicIcon, XIcon, ExternalLinkIcon, SettingsIcon } from '../Icons';
 
 interface Props {
   settings: AppSettings;
@@ -26,14 +27,14 @@ const SettingsPage: React.FC<Props> = ({ settings, onUpdate, onClose }) => {
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-dialog" onClick={e => e.stopPropagation()}>
         <div className="settings-header">
-          <h2>⚙️ Settings</h2>
-          <button className="settings-close" onClick={onClose}>✕</button>
+          <h2><SettingsIcon size={16} /> Settings</h2>
+          <button className="settings-close" onClick={onClose}><XIcon size={16} /></button>
         </div>
 
         <div className="settings-body">
           {/* API Configuration */}
           <section className="settings-section">
-            <h3>🔑 Gemini API</h3>
+            <h3><KeyIcon size={13} /> Gemini API</h3>
             <div className="settings-field">
               <label>
                 API Key
@@ -43,7 +44,7 @@ const SettingsPage: React.FC<Props> = ({ settings, onUpdate, onClose }) => {
                   rel="noopener noreferrer"
                   className="settings-link"
                 >
-                  Get a key →
+                  Get a key <ExternalLinkIcon size={10} />
                 </a>
               </label>
               <div className="settings-key-row">
@@ -84,7 +85,7 @@ const SettingsPage: React.FC<Props> = ({ settings, onUpdate, onClose }) => {
 
           {/* Candidate Profile */}
           <section className="settings-section">
-            <h3>👤 Candidate Profile</h3>
+            <h3><UserIcon size={13} /> Candidate Profile</h3>
             <div className="settings-field">
               <label>Name</label>
               <input
@@ -133,7 +134,7 @@ const SettingsPage: React.FC<Props> = ({ settings, onUpdate, onClose }) => {
 
           {/* Interview Defaults */}
           <section className="settings-section">
-            <h3>🎤 Interview Defaults</h3>
+            <h3><MicIcon size={13} /> Interview Defaults</h3>
             <div className="settings-field">
               <label>Default Interviewer Personality</label>
               <select
